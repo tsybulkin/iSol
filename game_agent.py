@@ -35,7 +35,15 @@ def custom_score(game, player):
     """
 
     # TODO: finish this function!
-    return float(len(game.get_legal_moves()))
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves)
 
     raise NotImplementedError
 
@@ -123,23 +131,26 @@ class CustomPlayer:
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
         if len(legal_moves) == 0: return (-1,-1)
+        
+        if self.method == 'minimax': method = self.minimax
+        elif self.method == 'alphabeta': method = self.alphabeta
 
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            _,move = self.method(game, self.search_depth)
+            self.search_depth = 3
+            _,move = method(game, depth=1)
             return move
             pass
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            print("Time is over...")
             return random.choice(legal_moves)
 
         # Return the best move from the last completed search iteration
-        return random.choice(legal_moves)
+        return move
 
         raise NotImplementedError
 
@@ -172,12 +183,20 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        if depth == 1: 
-            return max( (self.score(game.forecast_move(m), self), m) 
-                    for m in game.get_legal_moves() ) 
+        if depth == self.search_depth:
+            if maximizing_player: 
+                return max( (self.score(game.forecast_move(m), self), m) 
+                        for m in game.get_legal_moves() )
+            else:
+                return min( (self.score(game.forecast_move(m), self), m) 
+                        for m in game.get_legal_moves() )
         else:
-            return max( self.minimax(game.forecast_move(m), depth-1, not maximizing_player) 
-                    for m in game.get_legal_moves() )   
+            if maximizing_player:
+                return max( self.minimax(game.forecast_move(m), depth+1, not maximizing_player) 
+                        for m in game.get_legal_moves() )  
+            else:
+                return min( self.minimax(game.forecast_move(m), depth+1, not maximizing_player) 
+                        for m in game.get_legal_moves() ) 
 
         raise NotImplementedError
 
