@@ -35,7 +35,7 @@ def custom_score(game, player):
     """
 
     # TODO: finish this function!
-    return 0.
+    return float(len(game.get_legal_moves()))
 
     raise NotImplementedError
 
@@ -123,17 +123,20 @@ class CustomPlayer:
         # move from the game board (i.e., an opening book), or returning
         # immediately if there are no legal moves
         if len(legal_moves) == 0: return (-1,-1)
-        
+
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
+            _,move = self.method(game, self.search_depth)
+            return move
             pass
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            pass
+            print("Time is over...")
+            return random.choice(legal_moves)
 
         # Return the best move from the last completed search iteration
         return random.choice(legal_moves)
@@ -169,6 +172,13 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
+        if depth == 1: 
+            return max( (self.score(game.forecast_move(m), self), m) 
+                    for m in game.get_legal_moves() ) 
+        else:
+            return max( self.minimax(game.forecast_move(m), depth-1, not maximizing_player) 
+                    for m in game.get_legal_moves() )   
+
         raise NotImplementedError
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
