@@ -80,7 +80,7 @@ class CustomPlayer:
     """
 
     def __init__(self, search_depth=3, score_fn=custom_score,
-                 iterative=True, method='minimax', timeout=10.):
+                 iterative=True, method='minimax', timeout=0.9):
         self.search_depth = search_depth
         self.iterative = iterative
         self.score = score_fn
@@ -136,20 +136,26 @@ class CustomPlayer:
         if self.method == 'minimax': method = self.minimax
         elif self.method == 'alphabeta': method = self.alphabeta
 
+        move = legal_moves[0]
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            _,move = method(game, depth=2)
+            for d in range(1,7):
+                _,move1 = method(game, depth=d)
+                if self.time_left() < self.TIMER_THRESHOLD: break
+                else: move = move1
+            
             return move
 
         except Timeout:
             # Handle any actions required at timeout, if necessary
-            return random.choice(legal_moves)
+            return move
             
         # Return the best move from the last completed search iteration
-        raise NotImplementedError
+        return move
+        
 
     def minimax(self, game, depth, maximizing_player=True):
         """Implement the minimax search algorithm as described in the lectures.
@@ -179,20 +185,25 @@ class CustomPlayer:
         if self.time_left() < self.TIMER_THRESHOLD: raise Timeout()
         
         # TODO: finish this function!
+        ## set initial values for best move and value
         if maximizing_player: v = float('-inf')
         else: v = float('inf')
-        move = game.get_legal_moves()[0]
+        moves = game.get_legal_moves()
+        if len(moves) == 0: return v,None
+        else: move = moves[0]
 
-        for m in game.get_legal_moves():
+        for m in moves:
+            ## return the best found move and value for incomplete branch
             if self.time_left() < self.TIMER_THRESHOLD: return v,move
 
-            if depth == 1:
+            if depth == 1: 
                 s = self.score(game.forecast_move(m), self)
             else:
                 s,_ = self.minimax(game.forecast_move(m), depth-1,not maximizing_player)
             
+            ## assign new best value and move
             if maximizing_player:
-                if s > v: v, move = s, m
+                if s > v: v,move = s, m
             else:
                 if s < v: v,move = s, m
             
@@ -236,11 +247,15 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
+        ## set initial values for best move and value
         if maximizing_player: v = float('-inf')
         else: v = float('inf')
-        move = game.get_legal_moves()[0]
+        moves = game.get_legal_moves()
+        if len(moves) == 0: return v,None
+        else: move = moves[0]
 
-        for m in game.get_legal_moves():
+        for m in moves:
+            ## return the best found move and value for incomplete tree branch
             if self.time_left() < self.TIMER_THRESHOLD: return v,move
 
             if depth == 1:
@@ -248,6 +263,7 @@ class CustomPlayer:
             else:
                 s,_ = self.alphabeta(game.forecast_move(m), depth-1,alpha,beta,not maximizing_player)
                 
+            ## assign new value and best found move as well as update alpha and beta
             if maximizing_player:
                 if s > v: v, move = s, m
                 alpha = max(alpha,v)
