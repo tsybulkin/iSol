@@ -182,10 +182,8 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        if maximizing_player: 
-            best = max
-        else: 
-            best = min
+        if maximizing_player: best = max
+        else: best = min
 
         if depth == 1:
             return best((self.score(game.forecast_move(m), self), m) 
@@ -233,5 +231,13 @@ class CustomPlayer:
             raise Timeout()
 
         # TODO: finish this function!
-        return 0,(-1,-1)
+        if maximizing_player: best = max
+        else: best = min
+
+        if depth == 1:
+            return best((self.score(game.forecast_move(m), self), m) 
+                        for m in game.get_legal_moves() )
+        else:
+            return best((self.minimax(game.forecast_move(m), depth-1, not maximizing_player),m)
+                        for m in game.get_legal_moves() )
         raise NotImplementedError
