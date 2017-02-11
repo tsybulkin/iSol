@@ -176,22 +176,29 @@ class CustomPlayer:
         tuple(int, int)
             The best move for the current branch; (-1, -1) for no legal moves
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise Timeout()
+        if self.time_left() < self.TIMER_THRESHOLD: raise Timeout()
         
         # TODO: finish this function!
-        if maximizing_player: best = max
-        else: best = min
+        if maximizing_player: v = float('-inf')
+        else: v = float('inf')
+        move = game.get_legal_moves()[0]
 
-        if depth == 1:
-            return best((self.score(game.forecast_move(m), self), m) 
-                        for m in game.get_legal_moves() )
-        else:
-            return best((self.minimax(game.forecast_move(m), depth-1, not maximizing_player),m)
-                        for m in game.get_legal_moves() )
+        for m in game.get_legal_moves():
+            if self.time_left() < self.TIMER_THRESHOLD: return v,move
+
+            if depth == 1:
+                s = self.score(game.forecast_move(m), self)
+            else:
+                s,_ = self.minimax(game.forecast_move(m), depth-1,not maximizing_player)
             
-        raise NotImplementedError
+            if maximizing_player:
+                if s > v: v, move = s, m
+            else:
+                if s < v: v,move = s, m
+            
+        return v,move
 
+        
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
@@ -233,34 +240,23 @@ class CustomPlayer:
         else: v = float('inf')
         move = game.get_legal_moves()[0]
 
-        if depth == 1:
-            for m in game.get_legal_moves():
+        for m in game.get_legal_moves():
+            if self.time_left() < self.TIMER_THRESHOLD: return v,move
+
+            if depth == 1:
                 s = self.score(game.forecast_move(m), self)
-                if maximizing_player:
-                    if s > v: v, move = s, m
-                    alpha = max(alpha,v)
-                else:
-                    if s < v: v,move = s, m
-                    beta = min(beta,s)
-                
-                if beta <= alpha: break
-            else: move = game.get_legal_moves()[0]
-            return v,move
-                
-        else:
-            for m in game.get_legal_moves():
-                if self.time_left() < self.TIMER_THRESHOLD:
-                    return v,move
+            else:
                 s,_ = self.alphabeta(game.forecast_move(m), depth-1,alpha,beta,not maximizing_player)
-                if maximizing_player:
-                    if s > v: v, move = s, m
-                    alpha = max(alpha,v)
-                else:
-                    if s < v: v,move = s, m
-                    beta = min(beta,s)
                 
-                if beta <= alpha: break
-            return v,move
-
-
-        raise NotImplementedError
+            if maximizing_player:
+                if s > v: v, move = s, m
+                alpha = max(alpha,v)
+            else:
+                if s < v: v,move = s, m
+                beta = min(beta,s)
+            
+            if beta <= alpha: break
+        
+        return v,move
+                
+        
