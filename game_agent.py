@@ -142,7 +142,7 @@ class CustomPlayer:
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            _,move = method(game, depth=1)
+            _,move = method(game, depth=2)
             return move
             pass
 
@@ -191,11 +191,12 @@ class CustomPlayer:
             return best((self.score(game.forecast_move(m), self), m) 
                         for m in game.get_legal_moves() )
         else:
-            return best(self.minimax(game.forecast_move(m), depth-1, not maximizing_player) 
+            return best((self.minimax(game.forecast_move(m), depth-1, not maximizing_player),m)
                         for m in game.get_legal_moves() )
             
         raise NotImplementedError
 
+    
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf"), maximizing_player=True):
         """Implement minimax search with alpha-beta pruning as described in the
         lectures.
