@@ -33,20 +33,44 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-
     # TODO: finish this function!
-    if game.is_loser(player):
-        return float("-inf")
+    if game.is_loser(player): return float("-inf")
+    if game.is_winner(player): return float("inf")
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    return float(sum( 5 + i%3 + j%3 for (i,j) in own_moves) \
+            - sum( 5 + i%3 + j%3 for (i,j) in opp_moves))
 
-    if game.is_winner(player):
-        return float("inf")
+def custom_score1(game, player):
+    
+    if game.is_loser(player): return float("-inf")
+    if game.is_winner(player): return float("inf")
 
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
-    return float(own_moves - opp_moves)
+    ## 
+    if game.move_count < game.width*game.height/1.4:
+        own_moves = len(game.get_legal_moves(player))
+        opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+        return float(own_moves - opp_moves)
+    else:
+        own_count = get_rnd_remained_move_count(game,player)
+        opp_count = get_rnd_remained_move_count(game,game.get_opponent(player))
+        return float(own_count - opp_count)
     
 
-    raise NotImplementedError
+def custom_score2(game, player):
+    if game.is_loser(player): return float("-inf")
+    if game.is_winner(player): return float("inf")
+    if game.__active_player__ == player:
+        if len(game.get_legal_moves(player)) == 0: return float("-inf")
+    else:
+        if len(game.get_legal_moves(game.get_opponent(player))) == 0: return float("inf")
+    return -len(game.get_legal_moves(game.get_opponent(player)))
+    
+
+def get_rnd_remained_move_count(game,player,cnt=0):
+    moves = game.get_legal_moves(player)
+    if len(moves) == 0: return cnt
+    return get_rnd_remained_move_count(game.forecast_move(random.choice(moves)),player,cnt+1)
 
 
 class CustomPlayer:
@@ -80,7 +104,7 @@ class CustomPlayer:
     """
 
     def __init__(self, search_depth=3, score_fn=custom_score,
-                 iterative=True, method='minimax', timeout=0.9):
+                 iterative=True, method='minimax', timeout=10.):
         self.search_depth = search_depth
         self.iterative = iterative
         self.score = score_fn
@@ -136,16 +160,17 @@ class CustomPlayer:
         if self.method == 'minimax': method = self.minimax
         elif self.method == 'alphabeta': method = self.alphabeta
 
-        move = legal_moves[0]
+        move = random.choice(legal_moves)
         try:
             # The search method call (alpha beta or minimax) should happen in
             # here in order to avoid timeout. The try/except block will
             # automatically catch the exception raised by the search method
             # when the timer gets close to expiring
-            for d in range(1,7):
-                _,move1 = method(game, depth=d)
-                if self.time_left() < self.TIMER_THRESHOLD: break
-                else: move = move1
+            if self.iterative:
+                for d in range(1,10):
+                    _,move = method(game, depth=d)
+            else:
+                _,move = method(game,depth=8)
             
             return move
 
@@ -182,20 +207,26 @@ class CustomPlayer:
         tuple(int, int)
             The best move for the current branch; (-1, -1) for no legal moves
         """
-        if self.time_left() < self.TIMER_THRESHOLD: raise Timeout()
+        T = self.time_left()
+        if T < 0.9*self.TIMER_THRESHOLD: raise Timeout()
+        if T < 0.75*self.TIMER_THRESHOLD: # return immediately
+            if maximizing_player:
+                return max( (self.score(game.forecast_move(m), self), m)
+                            for m in game.get_legal_moves() )
+            return min( (self.score(game.forecast_move(m), self), m)
+                            for m in game.get_legal_moves() )
         
         # TODO: finish this function!
         ## set initial values for best move and value
         if maximizing_player: v = float('-inf')
         else: v = float('inf')
-        moves = game.get_legal_moves()
+        moves = sorted(game.get_legal_moves(), key=lambda x: (x[0]%3) + (x[1]%3) )
         if len(moves) == 0: return v,None
         else: move = moves[0]
 
         for m in moves:
             ## return the best found move and value for incomplete branch
-            if self.time_left() < self.TIMER_THRESHOLD: return v,move
-
+            
             if depth == 1: 
                 s = self.score(game.forecast_move(m), self)
             else:
@@ -243,21 +274,27 @@ class CustomPlayer:
         tuple(int, int)
             The best move for the current branch; (-1, -1) for no legal moves
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise Timeout()
-
+        T = self.time_left()
+        if T < 0.9*self.TIMER_THRESHOLD: raise Timeout()
+        if T < 0.75*self.TIMER_THRESHOLD:
+            if maximizing_player:
+                return max( (self.score(game.forecast_move(m), self), m)
+                            for m in game.get_legal_moves() )
+            return min( (self.score(game.forecast_move(m), self), m)
+                            for m in game.get_legal_moves() )
+        
         # TODO: finish this function!
         ## set initial values for best move and value
         if maximizing_player: v = float('-inf')
         else: v = float('inf')
-        moves = game.get_legal_moves()
+
+        # choosing central moves first
+        moves = sorted(game.get_legal_moves(), key=lambda x: (x[0]%3) + (x[1]%3) )
         if len(moves) == 0: return v,None
         else: move = moves[0]
 
         for m in moves:
-            ## return the best found move and value for incomplete tree branch
-            if self.time_left() < self.TIMER_THRESHOLD: return v,move
-
+            
             if depth == 1:
                 s = self.score(game.forecast_move(m), self)
             else:
